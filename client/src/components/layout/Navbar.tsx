@@ -8,7 +8,7 @@ export function Navbar() {
         <div className="flex items-center gap-2 cursor-pointer group">
           <Terminal className="text-primary w-6 h-6" />
           <span className="text-xl font-heading font-bold tracking-tighter text-foreground group-hover:text-primary transition-colors">
-            0x_INFRA
+            0x_SCADA
           </span>
         </div>
       </Link>

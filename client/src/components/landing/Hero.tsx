@@ -17,10 +17,17 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 border border-primary/50 bg-primary/5 px-3 py-1 w-fit"
+            className="flex flex-col gap-2 font-mono text-xs uppercase tracking-widest text-primary/80"
           >
-            <div className="w-2 h-2 bg-primary animate-pulse" />
-            <span className="text-primary font-mono text-xs uppercase tracking-widest">System Operational</span>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-primary animate-pulse" />
+              <span>System Status: OPERATIONAL</span>
+            </div>
+            <div className="flex flex-col gap-1 pl-4 border-l border-primary/30 text-muted-foreground">
+              <span>Sites Online: 137</span>
+              <span>Events Anchored (24h): 42,981</span>
+              <span className="text-destructive">Critical Incidents Logged: 3</span>
+            </div>
           </motion.div>
 
           <motion.h1 
@@ -29,9 +36,9 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.2 }}
             className="text-6xl md:text-8xl font-heading font-bold leading-[0.85] tracking-tighter uppercase"
           >
-            Unstoppable<br/>
-            <span className="text-stroke text-transparent hover:text-primary transition-colors duration-300">Infra</span><br/>
-            Structure
+            0x_SCADA<br/>
+            <span className="text-stroke text-transparent hover:text-primary transition-colors duration-300">Sovereign</span><br/>
+            Control
           </motion.h1>
 
           <motion.p 
@@ -40,7 +47,7 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.4 }}
             className="font-mono text-muted-foreground text-lg md:text-xl max-w-md border-l-2 border-primary pl-4"
           >
-            DePIN architecture for the sovereign web. Censorship resistant. High throughput. Zero latency.
+            Sovereign industrial control fabric. Safety-critical. Censorship-resistant. Field-tested.
           </motion.p>
 
           <motion.div 
@@ -49,10 +56,16 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.6 }}
             className="flex flex-wrap gap-4 mt-4"
           >
-            <button className="bg-foreground text-background font-mono font-bold uppercase px-8 py-4 border-2 border-foreground hover:bg-transparent hover:text-foreground transition-all">
-              Deploy_Node()
+            <button className="bg-foreground text-background font-mono font-bold uppercase px-6 py-3 border-2 border-foreground hover:bg-transparent hover:text-foreground transition-all">
+              Deploy_Gateway()
             </button>
-            <button className="bg-transparent text-primary font-mono font-bold uppercase px-8 py-4 border-2 border-primary hover:bg-primary hover:text-black transition-all">
+            <button className="bg-transparent text-primary font-mono font-bold uppercase px-6 py-3 border-2 border-primary hover:bg-primary hover:text-black transition-all">
+              View_Sites
+            </button>
+            <button className="bg-transparent text-muted-foreground font-mono font-bold uppercase px-6 py-3 border-2 border-muted-foreground hover:bg-muted-foreground hover:text-black transition-all">
+              Audit_Log
+            </button>
+            <button className="bg-transparent text-muted-foreground font-mono font-bold uppercase px-6 py-3 border-2 border-muted-foreground hover:bg-muted-foreground hover:text-black transition-all">
               Read_Docs
             </button>
           </motion.div>
@@ -77,11 +90,16 @@ export function Hero() {
            </div>
            
            {/* Decorative Code Block */}
-           <div className="absolute bottom-10 -right-10 bg-black/80 border border-white/20 p-4 font-mono text-xs text-primary backdrop-blur-md">
+           <div className="absolute bottom-10 -right-10 bg-black/80 border border-white/20 p-4 font-mono text-xs text-primary backdrop-blur-md shadow-2xl min-w-[300px]">
              <p>{`> init_sequence_start`}</p>
-             <p>{`> connecting to mesh...`}</p>
-             <p>{`> 100% packet_loss: 0`}</p>
-             <p className="animate-pulse">{`> ready_`}</p>
+             <p className="text-muted-foreground my-1">{`> discovering field_gates...`}</p>
+             <p>{`> mesh_links: 15 regions [OK]`}</p>
+             <p>{`> control_channels: encrypted [OK]`}</p>
+             <p>{`> on_chain_anchors: synced [OK]`}</p>
+             <br/>
+             <p>{`> packet_loss: 0.002%`}</p>
+             <p>{`> safety_interlocks: LOCAL`}</p>
+             <p className="animate-pulse mt-2">{`> ready_`}</p>
            </div>
         </motion.div>
       </div>

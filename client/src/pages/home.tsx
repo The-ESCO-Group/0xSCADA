@@ -15,9 +15,9 @@ export default function Home() {
       <footer className="bg-black border-t border-white/20 py-12">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-start gap-8">
           <div>
-            <h2 className="text-4xl font-heading font-bold text-white mb-2">0x_INFRA</h2>
+            <h2 className="text-4xl font-heading font-bold text-white mb-2">0x_SCADA</h2>
             <p className="font-mono text-muted-foreground text-sm max-w-xs">
-              Building the decentralized future, one block at a time.
+              Building the sovereign control fabric, one site at a time.
             </p>
           </div>
           

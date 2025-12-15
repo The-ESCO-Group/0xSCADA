@@ -1,36 +1,35 @@
-import { Server, Database, Globe, Lock, Cpu, Activity } from "lucide-react";
-import { motion } from "framer-motion";
+import { Router, Anchor, Fingerprint, ClipboardCheck, Globe, Search } from "lucide-react";
 
 const features = [
   {
-    icon: Server,
-    title: "RPC Nodes",
-    desc: "Direct access to 40+ chains. 99.99% uptime SLA. Websocket support."
+    icon: Router,
+    title: "Field Gateways",
+    desc: "Industrial edge clients speaking Modbus, DNP3, CIP, IEC 61850. TLS + key management built in."
   },
   {
-    icon: Database,
-    title: "Indexer API",
-    desc: "Query blockchain data with SQL-like precision. Historical data access."
+    icon: Anchor,
+    title: "Event Anchors",
+    desc: "Bundle safety events, breaker operations, and setpoint changes. Hash and anchor to chain for audit-proof history."
+  },
+  {
+    icon: Fingerprint,
+    title: "Identity & Access",
+    desc: "On-chain roles for technicians, engineers, and auditors. Hardware key support. Session-level access proofs."
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Compliance Engine",
+    desc: "Model NFPA 70B programs and maintenance schedules as smart contracts. Track status across multi-site portfolios."
   },
   {
     icon: Globe,
-    title: "Global Mesh",
-    desc: "Distributed node network across 15 regions. Auto-failover routing."
+    title: "DePIN Mesh",
+    desc: "Distributed infra nodes across multiple regions and providers. Auto-failover routing for SCADA backhauls."
   },
   {
-    icon: Lock,
-    title: "ZK Proofs",
-    desc: "Generate proofs on demand. Dedicated prover instances available."
-  },
-  {
-    icon: Cpu,
-    title: "Dedicated Hardware",
-    desc: "Bare metal performance. No shared resources. Full isolation."
-  },
-  {
-    icon: Activity,
-    title: "Real-time Analytics",
-    desc: "Deep insights into dApp usage. Mempool monitoring and alerts."
+    icon: Search,
+    title: "Analytics & Forensics",
+    desc: "Query operations over time. Correlate events with maintenance and configuration changes. Export to existing historians."
   }
 ];
 
@@ -43,7 +42,7 @@ export function Features() {
             System<br/><span className="text-primary">Capabilities</span>
           </h2>
           <span className="font-mono text-muted-foreground hidden md:block">
-            // INDEX: 002<br/>
+            // INDEX: 070B<br/>
             // STATUS: ACTIVE
           </span>
         </div>
