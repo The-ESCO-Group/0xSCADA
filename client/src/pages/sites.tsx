@@ -1,8 +1,30 @@
 import { Navbar } from "@/components/layout/Navbar";
-import { MOCK_SITES, MOCK_ASSETS } from "@/data/mockData";
 import { Search, MapPin, Zap, AlertCircle, CheckCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSites, fetchAssets } from "@/lib/api";
+import { useState } from "react";
 
 export default function Sites() {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: sites = [] } = useQuery({
+    queryKey: ["sites"],
+    queryFn: fetchSites,
+    refetchInterval: 5000,
+  });
+
+  const { data: assets = [] } = useQuery({
+    queryKey: ["assets"],
+    queryFn: fetchAssets,
+    refetchInterval: 5000,
+  });
+
+  const filteredSites = sites.filter(site => 
+    site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    site.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    site.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground font-mono">
       <Navbar />
@@ -18,17 +40,28 @@ export default function Sites() {
               <input 
                 type="text" 
                 placeholder="Search ID, Tag, or Location..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white/5 border border-white/20 pl-10 pr-4 py-2 text-sm focus:border-primary outline-none transition-colors"
               />
             </div>
-            <button className="bg-primary text-black font-bold uppercase px-4 py-2 text-sm hover:bg-primary/80 transition-colors">
-              + Register
-            </button>
           </div>
         </div>
 
+        {filteredSites.length === 0 && sites.length > 0 && (
+          <div className="text-center text-muted-foreground py-8">
+            No sites match your search criteria.
+          </div>
+        )}
+
+        {sites.length === 0 && (
+          <div className="text-center text-muted-foreground py-8">
+            No sites registered yet. Field simulator will create initial infrastructure on startup.
+          </div>
+        )}
+
         <div className="space-y-8">
-          {MOCK_SITES.map(site => (
+          {filteredSites.map(site => (
             <div key={site.id} className="border border-white/10 bg-white/5">
               <div className="p-4 border-b border-white/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/[0.02]">
                 <div className="flex items-center gap-4">
@@ -45,15 +78,11 @@ export default function Sites() {
                 <div className="flex items-center gap-4 text-xs font-mono">
                   <div className="flex flex-col items-end">
                     <span className="text-muted-foreground">Owner</span>
-                    <span className="font-bold font-mono">{site.owner}</span>
+                    <span className="font-bold font-mono">{site.owner.slice(0, 8)}...</span>
                   </div>
-                  <button className="border border-white/20 px-3 py-1 hover:bg-white/10 transition-colors uppercase">
-                    Details
-                  </button>
                 </div>
               </div>
 
-              {/* Assets List */}
               <div className="p-0 overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs uppercase bg-white/5 text-muted-foreground">
@@ -63,11 +92,10 @@ export default function Sites() {
                       <th className="px-6 py-3">Criticality</th>
                       <th className="px-6 py-3">Metadata</th>
                       <th className="px-6 py-3">Status</th>
-                      <th className="px-6 py-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {MOCK_ASSETS.filter(a => a.siteId === site.id).map(asset => (
+                    {assets.filter(a => a.siteId === site.id).map(asset => (
                       <tr key={asset.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                         <td className="px-6 py-4 font-bold font-mono">{asset.nameOrTag}</td>
                         <td className="px-6 py-4">{asset.assetType}</td>
@@ -81,22 +109,17 @@ export default function Sites() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-xs text-muted-foreground font-mono">
-                          {JSON.stringify(asset.metadata).slice(0, 30)}...
+                          {JSON.stringify(asset.metadata).slice(0, 40)}...
                         </td>
                         <td className="px-6 py-4">
                            {asset.status === 'OK' && <span className="text-primary flex items-center gap-1"><CheckCircle className="w-3 h-3"/> OK</span>}
                            {asset.status === 'WARNING' && <span className="text-yellow-500 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> WARN</span>}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <button className="text-primary hover:underline text-xs uppercase font-bold">
-                            View History
-                          </button>
-                        </td>
                       </tr>
                     ))}
-                    {MOCK_ASSETS.filter(a => a.siteId === site.id).length === 0 && (
+                    {assets.filter(a => a.siteId === site.id).length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground italic">
+                        <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic">
                           No assets registered at this site.
                         </td>
                       </tr>

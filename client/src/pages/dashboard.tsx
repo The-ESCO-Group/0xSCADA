@@ -1,12 +1,30 @@
 import { Navbar } from "@/components/layout/Navbar";
-import { MOCK_SITES, MOCK_ASSETS, MOCK_EVENTS } from "@/data/mockData";
 import { Activity, ShieldCheck, AlertTriangle, Database } from "lucide-react";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSites, fetchAssets, fetchEvents } from "@/lib/api";
 
 export default function Dashboard() {
-  const onlineSites = MOCK_SITES.filter(s => s.status === "ONLINE").length;
-  const criticalAssets = MOCK_ASSETS.filter(a => a.critical).length;
-  const recentEvents = MOCK_EVENTS.slice(0, 5);
+  const { data: sites = [] } = useQuery({
+    queryKey: ["sites"],
+    queryFn: fetchSites,
+    refetchInterval: 5000,
+  });
+
+  const { data: assets = [] } = useQuery({
+    queryKey: ["assets"],
+    queryFn: fetchAssets,
+    refetchInterval: 5000,
+  });
+
+  const { data: events = [] } = useQuery({
+    queryKey: ["events"],
+    queryFn: () => fetchEvents(10),
+    refetchInterval: 2000,
+  });
+
+  const onlineSites = sites.filter(s => s.status === "ONLINE").length;
+  const criticalAssets = assets.filter(a => a.critical).length;
 
   return (
     <div className="min-h-screen bg-background text-foreground font-mono">
@@ -22,12 +40,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
           <StatCard 
             label="Active Sites" 
             value={onlineSites.toString()} 
-            total={MOCK_SITES.length.toString()} 
+            total={sites.length.toString()} 
             icon={Database} 
             status="good"
           />
@@ -39,22 +56,21 @@ export default function Dashboard() {
             status="neutral"
           />
           <StatCard 
-            label="24h Events" 
-            value={MOCK_EVENTS.length.toString()} 
-            subtext="+12% vs avg" 
+            label="Recent Events" 
+            value={events.length.toString()} 
+            subtext="Last 10 events" 
             icon={Activity} 
             status="good"
           />
           <StatCard 
             label="Active Alerts" 
-            value="1" 
+            value={assets.filter(a => a.status === "WARNING").length.toString()} 
             subtext="Requires Attention" 
             icon={AlertTriangle} 
-            status="warning"
+            status={assets.filter(a => a.status === "WARNING").length > 0 ? "warning" : "good"}
           />
         </div>
 
-        {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 border border-white/10 bg-white/5 p-6">
             <h2 className="text-xl font-heading uppercase mb-6 flex items-center gap-2">
@@ -62,25 +78,42 @@ export default function Dashboard() {
               Event Stream
             </h2>
             <div className="space-y-4">
-              {recentEvents.map(evt => (
-                <div key={evt.id} className="flex flex-col md:flex-row gap-4 border-b border-white/5 pb-4 last:border-0 hover:bg-white/5 p-2 transition-colors cursor-pointer group">
-                  <div className="min-w-[140px]">
-                    <span className="text-xs text-muted-foreground block">{new Date(evt.timestamp).toLocaleTimeString()}</span>
-                    <span className="text-xs font-bold text-primary">{evt.eventType}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold mb-1 group-hover:text-primary transition-colors">
-                      {MOCK_ASSETS.find(a => a.id === evt.assetId)?.nameOrTag || evt.assetId}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{evt.details}</div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] bg-primary/20 text-primary px-2 py-1 uppercase border border-primary/30">
-                      Tx: {evt.txHash.slice(0, 6)}...
-                    </span>
-                  </div>
+              {events.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  Waiting for events from field simulator...
                 </div>
-              ))}
+              ) : (
+                events.map(evt => {
+                  const asset = assets.find(a => a.id === evt.assetId);
+                  return (
+                    <div key={evt.id} className="flex flex-col md:flex-row gap-4 border-b border-white/5 pb-4 last:border-0 hover:bg-white/5 p-2 transition-colors cursor-pointer group">
+                      <div className="min-w-[140px]">
+                        <span className="text-xs text-muted-foreground block">
+                          {new Date(evt.timestamp).toLocaleTimeString()}
+                        </span>
+                        <span className="text-xs font-bold text-primary">{evt.eventType}</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-bold mb-1 group-hover:text-primary transition-colors">
+                          {asset?.nameOrTag || evt.assetId}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{evt.details}</div>
+                      </div>
+                      <div className="text-right">
+                        {evt.txHash ? (
+                          <span className="text-[10px] bg-primary/20 text-primary px-2 py-1 uppercase border border-primary/30">
+                            Tx: {evt.txHash.slice(0, 6)}...
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-1 uppercase border border-yellow-500/30">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
             <div className="mt-6 text-right">
               <Link href="/events">
@@ -106,17 +139,17 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="flex justify-between text-xs mb-2 uppercase">
-                  <span>Mesh Uptime</span>
-                  <span className="text-primary">99.99%</span>
+                  <span>Database</span>
+                  <span className="text-primary">Connected</span>
                 </div>
                 <div className="h-1 bg-white/10 w-full">
-                  <div className="h-full bg-primary w-[99%]" />
+                  <div className="h-full bg-primary w-[100%]" />
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-xs mb-2 uppercase">
-                  <span>Indexer Sync</span>
-                  <span className="text-primary">Synced</span>
+                  <span>Simulator</span>
+                  <span className="text-primary">Active</span>
                 </div>
                 <div className="h-1 bg-white/10 w-full">
                   <div className="h-full bg-primary w-[100%]" />
@@ -125,19 +158,19 @@ export default function Dashboard() {
             </div>
             
             <div className="mt-12 p-4 border border-dashed border-white/20 bg-black/40">
-              <h3 className="text-xs font-bold uppercase text-muted-foreground mb-2">Network Status</h3>
+              <h3 className="text-xs font-bold uppercase text-muted-foreground mb-2">Network Stats</h3>
               <div className="space-y-2 text-xs">
                  <div className="flex justify-between">
-                   <span>Peers</span>
-                   <span className="font-bold">42</span>
+                   <span>Total Sites</span>
+                   <span className="font-bold">{sites.length}</span>
                  </div>
                  <div className="flex justify-between">
-                   <span>Block Height</span>
-                   <span className="font-bold">18,242,901</span>
+                   <span>Total Assets</span>
+                   <span className="font-bold">{assets.length}</span>
                  </div>
                  <div className="flex justify-between">
-                   <span>Gas Price</span>
-                   <span className="font-bold">12 gwei</span>
+                   <span>Total Events</span>
+                   <span className="font-bold">{events.length}+</span>
                  </div>
               </div>
             </div>
