@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import wireframeImg from "@assets/generated_images/abstract_wireframe_geometric_shape.png";
 import textureImg from "@assets/generated_images/gritty_concrete_texture_with_digital_noise_overlay.png";
 
@@ -56,15 +57,21 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.6 }}
             className="flex flex-wrap gap-4 mt-4"
           >
-            <button className="bg-foreground text-background font-mono font-bold uppercase px-6 py-3 border-2 border-foreground hover:bg-transparent hover:text-foreground transition-all">
-              Deploy_Gateway()
-            </button>
-            <button className="bg-transparent text-primary font-mono font-bold uppercase px-6 py-3 border-2 border-primary hover:bg-primary hover:text-black transition-all">
-              View_Sites
-            </button>
-            <button className="bg-transparent text-muted-foreground font-mono font-bold uppercase px-6 py-3 border-2 border-muted-foreground hover:bg-muted-foreground hover:text-black transition-all">
-              Audit_Log
-            </button>
+            <Link href="/dashboard">
+              <button className="cursor-pointer bg-foreground text-background font-mono font-bold uppercase px-6 py-3 border-2 border-foreground hover:bg-transparent hover:text-foreground transition-all">
+                Enter_Console()
+              </button>
+            </Link>
+            <Link href="/sites">
+              <button className="cursor-pointer bg-transparent text-primary font-mono font-bold uppercase px-6 py-3 border-2 border-primary hover:bg-primary hover:text-black transition-all">
+                View_Sites
+              </button>
+            </Link>
+            <Link href="/events">
+              <button className="cursor-pointer bg-transparent text-muted-foreground font-mono font-bold uppercase px-6 py-3 border-2 border-muted-foreground hover:bg-muted-foreground hover:text-black transition-all">
+                Audit_Log
+              </button>
+            </Link>
             <button className="bg-transparent text-muted-foreground font-mono font-bold uppercase px-6 py-3 border-2 border-muted-foreground hover:bg-muted-foreground hover:text-black transition-all">
               Read_Docs
             </button>

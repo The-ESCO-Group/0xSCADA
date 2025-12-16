@@ -14,8 +14,9 @@ export function Navbar() {
       </Link>
 
       <div className="hidden md:flex items-center gap-8 font-mono text-sm text-muted-foreground">
-        <a href="#features" className="hover:text-primary transition-colors uppercase">[Nodes]</a>
-        <a href="#pricing" className="hover:text-primary transition-colors uppercase">[Pricing]</a>
+        <Link href="/dashboard" className="hover:text-primary transition-colors uppercase">[Dashboard]</Link>
+        <Link href="/sites" className="hover:text-primary transition-colors uppercase">[Sites]</Link>
+        <Link href="/events" className="hover:text-primary transition-colors uppercase">[Events]</Link>
         <a href="#docs" className="hover:text-primary transition-colors uppercase">[Docs]</a>
       </div>
 
