@@ -106,7 +106,8 @@ export async function registerRoutes(
   // Events
   app.get("/api/events", async (req, res) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const parsedLimit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
+      const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 100;
       const events = await storage.getEventAnchors(limit);
       res.json(events);
     } catch (error) {
@@ -117,6 +118,10 @@ export async function registerRoutes(
 
   app.post("/api/events", async (req, res) => {
     try {
+      if (!req.body || req.body.payload === undefined) {
+        return res.status(400).json({ error: "Missing payload" });
+      }
+
       const payloadHash = blockchainService.hashPayload(req.body.payload);
 
       const eventData = {
@@ -626,7 +631,9 @@ export async function registerRoutes(
   app.post("/api/blueprints/seed", async (req, res) => {
     try {
       const alreadySeeded = await isDatabaseSeeded();
-      if (alreadySeeded && !req.query.force) {
+      const forceParam = typeof req.query.force === "string" ? req.query.force.toLowerCase() : "";
+      const force = forceParam === "true" || forceParam === "1";
+      if (alreadySeeded && !force) {
         return res.json({ 
           success: true, 
           message: "Database already seeded. Use ?force=true to re-seed.",
@@ -847,7 +854,8 @@ export async function registerRoutes(
       );
 
       if (txHash) {
-        // Update record with txHash (would need to add update method)
+        await storage.updateGeneratedCodeTxHash(record.id, txHash);
+        record.txHash = txHash;
         res.json({
           success: true,
           txHash,

@@ -42,7 +42,7 @@ class FieldSimulator {
     const existingSites = await storage.getSites();
     
     if (existingSites.length === 0) {
-      console.log("📝 Seeding initial SCADA infrastructure...");
+      console.log("dY?- Seeding initial SCADA infrastructure...");
 
       const sites: InsertSite[] = [
         { name: "Substation Alpha", location: "Sector 7G", owner: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F", status: "ONLINE" },
@@ -118,7 +118,7 @@ class FieldSimulator {
       this.generateEvent();
     }, this.config.eventIntervalMs);
 
-    console.log("🔄 Field simulator started");
+    console.log("dY?- Field simulator started");
   }
 
   stop() {
@@ -258,3 +258,4 @@ class FieldSimulator {
 }
 
 export const fieldSimulator = new FieldSimulator();
+
