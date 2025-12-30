@@ -51,10 +51,10 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
     onSuccess: (data) => {
       setResult(data);
       setStep("complete");
-      queryClient.invalidateQueries({ queryKey: ["cmTypes"] });
-      queryClient.invalidateQueries({ queryKey: ["unitTypes"] });
-      queryClient.invalidateQueries({ queryKey: ["phaseTypes"] });
-      queryClient.invalidateQueries({ queryKey: ["blueprintsSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["cm-types"] });
+      queryClient.invalidateQueries({ queryKey: ["unit-types"] });
+      queryClient.invalidateQueries({ queryKey: ["phase-types"] });
+      queryClient.invalidateQueries({ queryKey: ["blueprints-summary"] });
     },
     onError: (error: Error) => {
       toast({
