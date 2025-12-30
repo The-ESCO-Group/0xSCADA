@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Terminal, Cpu, Zap } from "lucide-react";
+import { Terminal } from "lucide-react";
 
 export function Navbar() {
   return (
@@ -13,14 +13,16 @@ export function Navbar() {
         </div>
       </Link>
 
-      <div className="hidden md:flex items-center gap-8 font-mono text-sm text-muted-foreground">
-        <Link href="/dashboard" className="hover:text-primary transition-colors uppercase">[Dashboard]</Link>
-        <Link href="/sites" className="hover:text-primary transition-colors uppercase">[Sites]</Link>
-        <Link href="/events" className="hover:text-primary transition-colors uppercase">[Events]</Link>
-        <a href="#docs" className="hover:text-primary transition-colors uppercase">[Docs]</a>
+      <div className="hidden md:flex items-center gap-6 font-mono text-sm text-muted-foreground">
+        <Link href="/dashboard" className="hover:text-primary transition-colors uppercase" data-testid="nav-dashboard">[Dashboard]</Link>
+        <Link href="/sites" className="hover:text-primary transition-colors uppercase" data-testid="nav-sites">[Sites]</Link>
+        <Link href="/events" className="hover:text-primary transition-colors uppercase" data-testid="nav-events">[Events]</Link>
+        <Link href="/blueprints" className="hover:text-primary transition-colors uppercase" data-testid="nav-blueprints">[Blueprints]</Link>
+        <Link href="/vendors" className="hover:text-primary transition-colors uppercase" data-testid="nav-vendors">[Vendors]</Link>
+        <Link href="/codegen" className="hover:text-primary transition-colors uppercase" data-testid="nav-codegen">[CodeGen]</Link>
       </div>
 
-      <button className="bg-primary hover:bg-primary/80 text-black font-mono font-bold text-xs uppercase px-4 py-2 border border-primary transition-all hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[0px] active:translate-y-[0px] shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
+      <button className="bg-primary hover:bg-primary/80 text-black font-mono font-bold text-xs uppercase px-4 py-2 border border-primary transition-all hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[0px] active:translate-y-[0px] shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]" data-testid="button-connect-wallet">
         Connect_Wallet
       </button>
     </nav>
