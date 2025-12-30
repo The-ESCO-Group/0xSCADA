@@ -44,14 +44,9 @@ export default function CodeGen() {
       }
     },
     onSuccess: (result) => {
-      if (result.success) {
-        setGeneratedCode(result.code);
-        setCodeHash(result.codeHash);
-        setErrors([]);
-      } else {
-        setErrors(result.errors || ["Unknown error"]);
-        setGeneratedCode(null);
-      }
+      setGeneratedCode(result.code);
+      setCodeHash(result.codeHash);
+      setErrors([]);
     },
     onError: (error: Error) => {
       setErrors([error.message]);
