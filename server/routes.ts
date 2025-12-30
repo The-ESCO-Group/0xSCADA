@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { blockchainService } from "./blockchain";
 import { insertSiteSchema, insertAssetSchema, insertEventAnchorSchema, insertMaintenanceRecordSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { importBlueprints, validateCMReferences, validateUnitReferences, validatePhaseReferences } from "./blueprints";
+import type { BlueprintFiles } from "./blueprints";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -180,6 +182,428 @@ export async function registerRoutes(
     res.json({
       enabled: blockchainService.isEnabled(),
     });
+  });
+
+  // ============================================================================
+  // BLUEPRINTS API ENDPOINTS
+  // ============================================================================
+
+  // Control Module Types
+  app.get("/api/blueprints/cm-types", async (req, res) => {
+    try {
+      const cmTypes = await storage.getControlModuleTypes();
+      res.json(cmTypes);
+    } catch (error) {
+      console.error("Error fetching CM types:", error);
+      res.status(500).json({ error: "Failed to fetch control module types" });
+    }
+  });
+
+  app.get("/api/blueprints/cm-types/:name", async (req, res) => {
+    try {
+      const cmType = await storage.getControlModuleTypeByName(req.params.name);
+      if (!cmType) {
+        return res.status(404).json({ error: "Control module type not found" });
+      }
+      res.json(cmType);
+    } catch (error) {
+      console.error("Error fetching CM type:", error);
+      res.status(500).json({ error: "Failed to fetch control module type" });
+    }
+  });
+
+  // Control Module Instances
+  app.get("/api/blueprints/cm-instances", async (req, res) => {
+    try {
+      const instances = await storage.getControlModuleInstances();
+      res.json(instances);
+    } catch (error) {
+      console.error("Error fetching CM instances:", error);
+      res.status(500).json({ error: "Failed to fetch control module instances" });
+    }
+  });
+
+  // Unit Types
+  app.get("/api/blueprints/unit-types", async (req, res) => {
+    try {
+      const unitTypes = await storage.getUnitTypes();
+      res.json(unitTypes);
+    } catch (error) {
+      console.error("Error fetching unit types:", error);
+      res.status(500).json({ error: "Failed to fetch unit types" });
+    }
+  });
+
+  // Unit Instances
+  app.get("/api/blueprints/unit-instances", async (req, res) => {
+    try {
+      const instances = await storage.getUnitInstances();
+      res.json(instances);
+    } catch (error) {
+      console.error("Error fetching unit instances:", error);
+      res.status(500).json({ error: "Failed to fetch unit instances" });
+    }
+  });
+
+  // Phase Types
+  app.get("/api/blueprints/phase-types", async (req, res) => {
+    try {
+      const phaseTypes = await storage.getPhaseTypes();
+      res.json(phaseTypes);
+    } catch (error) {
+      console.error("Error fetching phase types:", error);
+      res.status(500).json({ error: "Failed to fetch phase types" });
+    }
+  });
+
+  // Phase Instances
+  app.get("/api/blueprints/phase-instances", async (req, res) => {
+    try {
+      const instances = await storage.getPhaseInstances();
+      res.json(instances);
+    } catch (error) {
+      console.error("Error fetching phase instances:", error);
+      res.status(500).json({ error: "Failed to fetch phase instances" });
+    }
+  });
+
+  // Design Specifications
+  app.get("/api/blueprints/design-specs", async (req, res) => {
+    try {
+      const specs = await storage.getDesignSpecifications();
+      res.json(specs);
+    } catch (error) {
+      console.error("Error fetching design specs:", error);
+      res.status(500).json({ error: "Failed to fetch design specifications" });
+    }
+  });
+
+  // Import Blueprints Package
+  app.post("/api/blueprints/import", async (req, res) => {
+    try {
+      const files: BlueprintFiles = req.body;
+      
+      if (!files.cmTypePackage || !files.designSpec) {
+        return res.status(400).json({ 
+          error: "Invalid blueprint package structure. Expected cmTypePackage and designSpec." 
+        });
+      }
+
+      // Parse the blueprints
+      const parseResult = importBlueprints(files);
+      
+      if (!parseResult.success) {
+        return res.status(400).json({
+          error: "Failed to parse blueprints",
+          errors: parseResult.errors,
+          warnings: parseResult.warnings,
+        });
+      }
+
+      // Validate references
+      const cmRefErrors = validateCMReferences(parseResult.cmTypes, parseResult.cmInstances);
+      const unitRefErrors = validateUnitReferences(parseResult.unitTypes, parseResult.unitInstances);
+      const phaseRefErrors = validatePhaseReferences(parseResult.cmTypes, parseResult.phaseTypes);
+      
+      const allErrors = [...cmRefErrors, ...unitRefErrors, ...phaseRefErrors];
+      if (allErrors.length > 0) {
+        return res.status(400).json({
+          error: "Validation failed",
+          errors: allErrors,
+          warnings: parseResult.warnings,
+        });
+      }
+
+      // Store CM Types
+      const storedCMTypes: Record<string, string> = {};
+      for (const cmType of parseResult.cmTypes) {
+        const stored = await storage.upsertControlModuleType({
+          name: cmType.name,
+          inputs: cmType.inputs,
+          outputs: cmType.outputs,
+          inOuts: cmType.inOuts,
+          sourcePackage: cmType.sourceFile,
+        });
+        storedCMTypes[cmType.name] = stored.id;
+      }
+
+      // Store Unit Types
+      const storedUnitTypes: Record<string, string> = {};
+      for (const unitType of parseResult.unitTypes) {
+        const stored = await storage.upsertUnitType({
+          name: unitType.name,
+          description: unitType.description,
+          variables: unitType.variables,
+        });
+        storedUnitTypes[unitType.name] = stored.id;
+      }
+
+      // Store Phase Types
+      const storedPhaseTypes: Record<string, string> = {};
+      for (const phaseType of parseResult.phaseTypes) {
+        const stored = await storage.upsertPhaseType({
+          name: phaseType.name,
+          description: phaseType.description,
+          linkedModules: phaseType.linkedModules,
+          inputs: phaseType.inputs,
+          outputs: phaseType.outputs,
+          inOuts: phaseType.inOuts,
+          internalValues: phaseType.internalValues,
+          hmiParameters: phaseType.hmiParameters,
+          recipeParameters: phaseType.recipeParameters,
+          reportParameters: phaseType.reportParameters,
+          sequences: phaseType.sequences,
+        });
+        storedPhaseTypes[phaseType.name] = stored.id;
+      }
+
+      // Store Unit Instances
+      const storedUnitInstances: Record<string, string> = {};
+      for (const group of parseResult.unitInstances) {
+        const typeId = storedUnitTypes[group.unitTypeName];
+        if (!typeId) continue;
+        
+        for (const instance of group.instances) {
+          const stored = await storage.createUnitInstance({
+            name: instance.name,
+            instanceNumber: instance.instanceNumber,
+            unitTypeId: typeId,
+            controllerId: instance.controller,
+            pidDrawing: instance.pidDrawing,
+            processCell: instance.processCell,
+            area: instance.area,
+            comment: instance.comment,
+          });
+          storedUnitInstances[instance.name] = stored.id;
+        }
+      }
+
+      // Store CM Instances
+      let cmInstanceCount = 0;
+      for (const group of parseResult.cmInstances) {
+        const typeId = storedCMTypes[group.cmTypeName];
+        if (!typeId) continue;
+        
+        for (const instance of group.instances) {
+          await storage.createControlModuleInstance({
+            name: instance.name,
+            instanceNumber: instance.instanceNumber,
+            controlModuleTypeId: typeId,
+            controllerId: instance.controller,
+            unitInstanceId: instance.unitInstance ? storedUnitInstances[instance.unitInstance] : undefined,
+            pidDrawing: instance.pidDrawing,
+            comment: instance.comment,
+            configuration: instance.configuration,
+          });
+          cmInstanceCount++;
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        imported: {
+          cmTypes: parseResult.cmTypes.length,
+          cmInstances: cmInstanceCount,
+          unitTypes: parseResult.unitTypes.length,
+          unitInstances: Object.keys(storedUnitInstances).length,
+          phaseTypes: parseResult.phaseTypes.length,
+        },
+        warnings: parseResult.warnings,
+      });
+    } catch (error) {
+      console.error("Error importing blueprints:", error);
+      res.status(500).json({ error: "Failed to import blueprints" });
+    }
+  });
+
+  // Blueprints Summary
+  app.get("/api/blueprints/summary", async (req, res) => {
+    try {
+      const [cmTypes, cmInstances, unitTypes, unitInstances, phaseTypes, phaseInstances, vendors] = await Promise.all([
+        storage.getControlModuleTypes(),
+        storage.getControlModuleInstances(),
+        storage.getUnitTypes(),
+        storage.getUnitInstances(),
+        storage.getPhaseTypes(),
+        storage.getPhaseInstances(),
+        storage.getVendors(),
+      ]);
+
+      res.json({
+        controlModuleTypes: cmTypes.length,
+        controlModuleInstances: cmInstances.length,
+        unitTypes: unitTypes.length,
+        unitInstances: unitInstances.length,
+        phaseTypes: phaseTypes.length,
+        phaseInstances: phaseInstances.length,
+        vendors: vendors.length,
+      });
+    } catch (error) {
+      console.error("Error fetching blueprints summary:", error);
+      res.status(500).json({ error: "Failed to fetch blueprints summary" });
+    }
+  });
+
+  // ============================================================================
+  // VENDOR API ENDPOINTS
+  // ============================================================================
+
+  // Vendors
+  app.get("/api/vendors", async (req, res) => {
+    try {
+      const vendors = await storage.getVendors();
+      res.json(vendors);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+      res.status(500).json({ error: "Failed to fetch vendors" });
+    }
+  });
+
+  app.get("/api/vendors/:id", async (req, res) => {
+    try {
+      const vendor = await storage.getVendorById(req.params.id);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+      res.json(vendor);
+    } catch (error) {
+      console.error("Error fetching vendor:", error);
+      res.status(500).json({ error: "Failed to fetch vendor" });
+    }
+  });
+
+  app.post("/api/vendors", async (req, res) => {
+    try {
+      const vendor = await storage.createVendor(req.body);
+      res.status(201).json(vendor);
+    } catch (error) {
+      console.error("Error creating vendor:", error);
+      res.status(500).json({ error: "Failed to create vendor" });
+    }
+  });
+
+  // Template Packages
+  app.get("/api/templates", async (req, res) => {
+    try {
+      const templates = await storage.getTemplatePackages();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ error: "Failed to fetch template packages" });
+    }
+  });
+
+  app.get("/api/templates/vendor/:vendorId", async (req, res) => {
+    try {
+      const templates = await storage.getTemplatePackagesByVendor(req.params.vendorId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      res.status(500).json({ error: "Failed to fetch template packages" });
+    }
+  });
+
+  app.post("/api/templates", async (req, res) => {
+    try {
+      const template = await storage.createTemplatePackage(req.body);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Error creating template:", error);
+      res.status(500).json({ error: "Failed to create template package" });
+    }
+  });
+
+  // Data Type Mappings
+  app.get("/api/data-types/vendor/:vendorId", async (req, res) => {
+    try {
+      const mappings = await storage.getDataTypeMappingsByVendor(req.params.vendorId);
+      res.json(mappings);
+    } catch (error) {
+      console.error("Error fetching data type mappings:", error);
+      res.status(500).json({ error: "Failed to fetch data type mappings" });
+    }
+  });
+
+  app.post("/api/data-types", async (req, res) => {
+    try {
+      const mapping = await storage.createDataTypeMapping(req.body);
+      res.status(201).json(mapping);
+    } catch (error) {
+      console.error("Error creating data type mapping:", error);
+      res.status(500).json({ error: "Failed to create data type mapping" });
+    }
+  });
+
+  // Controllers
+  app.get("/api/controllers", async (req, res) => {
+    try {
+      const controllers = await storage.getControllers();
+      res.json(controllers);
+    } catch (error) {
+      console.error("Error fetching controllers:", error);
+      res.status(500).json({ error: "Failed to fetch controllers" });
+    }
+  });
+
+  app.get("/api/controllers/vendor/:vendorId", async (req, res) => {
+    try {
+      const controllers = await storage.getControllersByVendor(req.params.vendorId);
+      res.json(controllers);
+    } catch (error) {
+      console.error("Error fetching controllers:", error);
+      res.status(500).json({ error: "Failed to fetch controllers" });
+    }
+  });
+
+  app.get("/api/controllers/site/:siteId", async (req, res) => {
+    try {
+      const controllers = await storage.getControllersBySite(req.params.siteId);
+      res.json(controllers);
+    } catch (error) {
+      console.error("Error fetching controllers:", error);
+      res.status(500).json({ error: "Failed to fetch controllers" });
+    }
+  });
+
+  app.post("/api/controllers", async (req, res) => {
+    try {
+      const controller = await storage.createController(req.body);
+      res.status(201).json(controller);
+    } catch (error) {
+      console.error("Error creating controller:", error);
+      res.status(500).json({ error: "Failed to create controller" });
+    }
+  });
+
+  // Generated Code
+  app.get("/api/generated-code", async (req, res) => {
+    try {
+      const code = await storage.getGeneratedCode();
+      res.json(code);
+    } catch (error) {
+      console.error("Error fetching generated code:", error);
+      res.status(500).json({ error: "Failed to fetch generated code" });
+    }
+  });
+
+  app.get("/api/generated-code/:sourceType/:sourceId", async (req, res) => {
+    try {
+      const code = await storage.getGeneratedCodeBySource(req.params.sourceType, req.params.sourceId);
+      res.json(code);
+    } catch (error) {
+      console.error("Error fetching generated code:", error);
+      res.status(500).json({ error: "Failed to fetch generated code" });
+    }
+  });
+
+  app.post("/api/generated-code", async (req, res) => {
+    try {
+      const code = await storage.createGeneratedCode(req.body);
+      res.status(201).json(code);
+    } catch (error) {
+      console.error("Error creating generated code:", error);
+      res.status(500).json({ error: "Failed to create generated code" });
+    }
   });
 
   return httpServer;
