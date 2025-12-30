@@ -11,6 +11,30 @@ import type {
   InsertEventAnchor,
   MaintenanceRecord,
   InsertMaintenanceRecord,
+  ControlModuleType,
+  InsertControlModuleType,
+  ControlModuleInstance,
+  InsertControlModuleInstance,
+  UnitType,
+  InsertUnitType,
+  UnitInstance,
+  InsertUnitInstance,
+  PhaseType,
+  InsertPhaseType,
+  PhaseInstance,
+  InsertPhaseInstance,
+  DesignSpecification,
+  InsertDesignSpecification,
+  Vendor,
+  InsertVendor,
+  TemplatePackage,
+  InsertTemplatePackage,
+  GeneratedCode,
+  InsertGeneratedCode,
+  DataTypeMapping,
+  InsertDataTypeMapping,
+  Controller,
+  InsertController,
 } from "@shared/schema";
 
 const { Pool } = pg;
@@ -37,6 +61,68 @@ export interface IStorage {
   createMaintenanceRecord(record: InsertMaintenanceRecord): Promise<MaintenanceRecord>;
   getMaintenanceRecords(): Promise<MaintenanceRecord[]>;
   getMaintenanceRecordsByAssetId(assetId: string): Promise<MaintenanceRecord[]>;
+
+  // Control Module Types
+  createControlModuleType(cmType: InsertControlModuleType): Promise<ControlModuleType>;
+  getControlModuleTypes(): Promise<ControlModuleType[]>;
+  getControlModuleTypeByName(name: string): Promise<ControlModuleType | undefined>;
+  upsertControlModuleType(cmType: InsertControlModuleType): Promise<ControlModuleType>;
+
+  // Control Module Instances
+  createControlModuleInstance(instance: InsertControlModuleInstance): Promise<ControlModuleInstance>;
+  getControlModuleInstances(): Promise<ControlModuleInstance[]>;
+  getControlModuleInstancesByTypeId(typeId: string): Promise<ControlModuleInstance[]>;
+
+  // Unit Types
+  createUnitType(unitType: InsertUnitType): Promise<UnitType>;
+  getUnitTypes(): Promise<UnitType[]>;
+  getUnitTypeByName(name: string): Promise<UnitType | undefined>;
+  upsertUnitType(unitType: InsertUnitType): Promise<UnitType>;
+
+  // Unit Instances
+  createUnitInstance(instance: InsertUnitInstance): Promise<UnitInstance>;
+  getUnitInstances(): Promise<UnitInstance[]>;
+  getUnitInstancesByTypeId(typeId: string): Promise<UnitInstance[]>;
+
+  // Phase Types
+  createPhaseType(phaseType: InsertPhaseType): Promise<PhaseType>;
+  getPhaseTypes(): Promise<PhaseType[]>;
+  getPhaseTypeByName(name: string): Promise<PhaseType | undefined>;
+  upsertPhaseType(phaseType: InsertPhaseType): Promise<PhaseType>;
+
+  // Phase Instances
+  createPhaseInstance(instance: InsertPhaseInstance): Promise<PhaseInstance>;
+  getPhaseInstances(): Promise<PhaseInstance[]>;
+
+  // Design Specifications
+  createDesignSpecification(spec: InsertDesignSpecification): Promise<DesignSpecification>;
+  getDesignSpecifications(): Promise<DesignSpecification[]>;
+
+  // Vendors
+  createVendor(vendor: InsertVendor): Promise<Vendor>;
+  getVendors(): Promise<Vendor[]>;
+  getVendorByName(name: string): Promise<Vendor | undefined>;
+  getVendorById(id: string): Promise<Vendor | undefined>;
+
+  // Template Packages
+  createTemplatePackage(template: InsertTemplatePackage): Promise<TemplatePackage>;
+  getTemplatePackages(): Promise<TemplatePackage[]>;
+  getTemplatePackagesByVendor(vendorId: string): Promise<TemplatePackage[]>;
+
+  // Generated Code
+  createGeneratedCode(code: InsertGeneratedCode): Promise<GeneratedCode>;
+  getGeneratedCode(): Promise<GeneratedCode[]>;
+  getGeneratedCodeBySource(sourceType: string, sourceId: string): Promise<GeneratedCode[]>;
+
+  // Data Type Mappings
+  createDataTypeMapping(mapping: InsertDataTypeMapping): Promise<DataTypeMapping>;
+  getDataTypeMappingsByVendor(vendorId: string): Promise<DataTypeMapping[]>;
+
+  // Controllers
+  createController(controller: InsertController): Promise<Controller>;
+  getControllers(): Promise<Controller[]>;
+  getControllersByVendor(vendorId: string): Promise<Controller[]>;
+  getControllersBySite(siteId: string): Promise<Controller[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -134,6 +220,294 @@ export class DatabaseStorage implements IStorage {
       .from(schema.maintenanceRecords)
       .where(eq(schema.maintenanceRecords.assetId, assetId))
       .orderBy(desc(schema.maintenanceRecords.performedAt));
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Control Module Types
+  // ============================================================================
+
+  async createControlModuleType(cmType: InsertControlModuleType): Promise<ControlModuleType> {
+    const [newType] = await this.db.insert(schema.controlModuleTypes).values(cmType).returning();
+    return newType;
+  }
+
+  async getControlModuleTypes(): Promise<ControlModuleType[]> {
+    return await this.db.select().from(schema.controlModuleTypes);
+  }
+
+  async getControlModuleTypeByName(name: string): Promise<ControlModuleType | undefined> {
+    const [cmType] = await this.db
+      .select()
+      .from(schema.controlModuleTypes)
+      .where(eq(schema.controlModuleTypes.name, name));
+    return cmType;
+  }
+
+  async upsertControlModuleType(cmType: InsertControlModuleType): Promise<ControlModuleType> {
+    const existing = await this.getControlModuleTypeByName(cmType.name);
+    if (existing) {
+      const [updated] = await this.db
+        .update(schema.controlModuleTypes)
+        .set({ ...cmType, updatedAt: new Date() })
+        .where(eq(schema.controlModuleTypes.id, existing.id))
+        .returning();
+      return updated;
+    }
+    return this.createControlModuleType(cmType);
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Control Module Instances
+  // ============================================================================
+
+  async createControlModuleInstance(instance: InsertControlModuleInstance): Promise<ControlModuleInstance> {
+    const [newInstance] = await this.db.insert(schema.controlModuleInstances).values(instance).returning();
+    return newInstance;
+  }
+
+  async getControlModuleInstances(): Promise<ControlModuleInstance[]> {
+    return await this.db.select().from(schema.controlModuleInstances);
+  }
+
+  async getControlModuleInstancesByTypeId(typeId: string): Promise<ControlModuleInstance[]> {
+    return await this.db
+      .select()
+      .from(schema.controlModuleInstances)
+      .where(eq(schema.controlModuleInstances.controlModuleTypeId, typeId));
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Unit Types
+  // ============================================================================
+
+  async createUnitType(unitType: InsertUnitType): Promise<UnitType> {
+    const [newType] = await this.db.insert(schema.unitTypes).values(unitType).returning();
+    return newType;
+  }
+
+  async getUnitTypes(): Promise<UnitType[]> {
+    return await this.db.select().from(schema.unitTypes);
+  }
+
+  async getUnitTypeByName(name: string): Promise<UnitType | undefined> {
+    const [unitType] = await this.db
+      .select()
+      .from(schema.unitTypes)
+      .where(eq(schema.unitTypes.name, name));
+    return unitType;
+  }
+
+  async upsertUnitType(unitType: InsertUnitType): Promise<UnitType> {
+    const existing = await this.getUnitTypeByName(unitType.name);
+    if (existing) {
+      const [updated] = await this.db
+        .update(schema.unitTypes)
+        .set({ ...unitType, updatedAt: new Date() })
+        .where(eq(schema.unitTypes.id, existing.id))
+        .returning();
+      return updated;
+    }
+    return this.createUnitType(unitType);
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Unit Instances
+  // ============================================================================
+
+  async createUnitInstance(instance: InsertUnitInstance): Promise<UnitInstance> {
+    const [newInstance] = await this.db.insert(schema.unitInstances).values(instance).returning();
+    return newInstance;
+  }
+
+  async getUnitInstances(): Promise<UnitInstance[]> {
+    return await this.db.select().from(schema.unitInstances);
+  }
+
+  async getUnitInstancesByTypeId(typeId: string): Promise<UnitInstance[]> {
+    return await this.db
+      .select()
+      .from(schema.unitInstances)
+      .where(eq(schema.unitInstances.unitTypeId, typeId));
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Phase Types
+  // ============================================================================
+
+  async createPhaseType(phaseType: InsertPhaseType): Promise<PhaseType> {
+    const [newType] = await this.db.insert(schema.phaseTypes).values(phaseType).returning();
+    return newType;
+  }
+
+  async getPhaseTypes(): Promise<PhaseType[]> {
+    return await this.db.select().from(schema.phaseTypes);
+  }
+
+  async getPhaseTypeByName(name: string): Promise<PhaseType | undefined> {
+    const [phaseType] = await this.db
+      .select()
+      .from(schema.phaseTypes)
+      .where(eq(schema.phaseTypes.name, name));
+    return phaseType;
+  }
+
+  async upsertPhaseType(phaseType: InsertPhaseType): Promise<PhaseType> {
+    const existing = await this.getPhaseTypeByName(phaseType.name);
+    if (existing) {
+      const [updated] = await this.db
+        .update(schema.phaseTypes)
+        .set({ ...phaseType, updatedAt: new Date() })
+        .where(eq(schema.phaseTypes.id, existing.id))
+        .returning();
+      return updated;
+    }
+    return this.createPhaseType(phaseType);
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Phase Instances
+  // ============================================================================
+
+  async createPhaseInstance(instance: InsertPhaseInstance): Promise<PhaseInstance> {
+    const [newInstance] = await this.db.insert(schema.phaseInstances).values(instance).returning();
+    return newInstance;
+  }
+
+  async getPhaseInstances(): Promise<PhaseInstance[]> {
+    return await this.db.select().from(schema.phaseInstances);
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Design Specifications
+  // ============================================================================
+
+  async createDesignSpecification(spec: InsertDesignSpecification): Promise<DesignSpecification> {
+    const [newSpec] = await this.db.insert(schema.designSpecifications).values(spec).returning();
+    return newSpec;
+  }
+
+  async getDesignSpecifications(): Promise<DesignSpecification[]> {
+    return await this.db
+      .select()
+      .from(schema.designSpecifications)
+      .orderBy(desc(schema.designSpecifications.createdAt));
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Vendors
+  // ============================================================================
+
+  async createVendor(vendor: InsertVendor): Promise<Vendor> {
+    const [newVendor] = await this.db.insert(schema.vendors).values(vendor).returning();
+    return newVendor;
+  }
+
+  async getVendors(): Promise<Vendor[]> {
+    return await this.db.select().from(schema.vendors).where(eq(schema.vendors.isActive, true));
+  }
+
+  async getVendorByName(name: string): Promise<Vendor | undefined> {
+    const [vendor] = await this.db
+      .select()
+      .from(schema.vendors)
+      .where(eq(schema.vendors.name, name));
+    return vendor;
+  }
+
+  async getVendorById(id: string): Promise<Vendor | undefined> {
+    const [vendor] = await this.db
+      .select()
+      .from(schema.vendors)
+      .where(eq(schema.vendors.id, id));
+    return vendor;
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Template Packages
+  // ============================================================================
+
+  async createTemplatePackage(template: InsertTemplatePackage): Promise<TemplatePackage> {
+    const [newTemplate] = await this.db.insert(schema.templatePackages).values(template).returning();
+    return newTemplate;
+  }
+
+  async getTemplatePackages(): Promise<TemplatePackage[]> {
+    return await this.db.select().from(schema.templatePackages);
+  }
+
+  async getTemplatePackagesByVendor(vendorId: string): Promise<TemplatePackage[]> {
+    return await this.db
+      .select()
+      .from(schema.templatePackages)
+      .where(eq(schema.templatePackages.vendorId, vendorId));
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Generated Code
+  // ============================================================================
+
+  async createGeneratedCode(code: InsertGeneratedCode): Promise<GeneratedCode> {
+    const [newCode] = await this.db.insert(schema.generatedCode).values(code).returning();
+    return newCode;
+  }
+
+  async getGeneratedCode(): Promise<GeneratedCode[]> {
+    return await this.db
+      .select()
+      .from(schema.generatedCode)
+      .orderBy(desc(schema.generatedCode.generatedAt));
+  }
+
+  async getGeneratedCodeBySource(sourceType: string, sourceId: string): Promise<GeneratedCode[]> {
+    return await this.db
+      .select()
+      .from(schema.generatedCode)
+      .where(eq(schema.generatedCode.sourceType, sourceType))
+      .where(eq(schema.generatedCode.sourceId, sourceId))
+      .orderBy(desc(schema.generatedCode.generatedAt));
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Data Type Mappings
+  // ============================================================================
+
+  async createDataTypeMapping(mapping: InsertDataTypeMapping): Promise<DataTypeMapping> {
+    const [newMapping] = await this.db.insert(schema.dataTypeMappings).values(mapping).returning();
+    return newMapping;
+  }
+
+  async getDataTypeMappingsByVendor(vendorId: string): Promise<DataTypeMapping[]> {
+    return await this.db
+      .select()
+      .from(schema.dataTypeMappings)
+      .where(eq(schema.dataTypeMappings.vendorId, vendorId));
+  }
+
+  // ============================================================================
+  // BLUEPRINTS - Controllers
+  // ============================================================================
+
+  async createController(controller: InsertController): Promise<Controller> {
+    const [newController] = await this.db.insert(schema.controllers).values(controller).returning();
+    return newController;
+  }
+
+  async getControllers(): Promise<Controller[]> {
+    return await this.db.select().from(schema.controllers);
+  }
+
+  async getControllersByVendor(vendorId: string): Promise<Controller[]> {
+    return await this.db
+      .select()
+      .from(schema.controllers)
+      .where(eq(schema.controllers.vendorId, vendorId));
+  }
+
+  async getControllersBySite(siteId: string): Promise<Controller[]> {
+    return await this.db
+      .select()
+      .from(schema.controllers)
+      .where(eq(schema.controllers.siteId, siteId));
   }
 }
 
