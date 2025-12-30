@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
@@ -113,6 +113,7 @@ export interface IStorage {
   createGeneratedCode(code: InsertGeneratedCode): Promise<GeneratedCode>;
   getGeneratedCode(): Promise<GeneratedCode[]>;
   getGeneratedCodeBySource(sourceType: string, sourceId: string): Promise<GeneratedCode[]>;
+  updateGeneratedCodeTxHash(id: string, txHash: string): Promise<void>;
 
   // Data Type Mappings
   createDataTypeMapping(mapping: InsertDataTypeMapping): Promise<DataTypeMapping>;
@@ -462,9 +463,18 @@ export class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(schema.generatedCode)
-      .where(eq(schema.generatedCode.sourceType, sourceType))
-      .where(eq(schema.generatedCode.sourceId, sourceId))
+      .where(and(
+        eq(schema.generatedCode.sourceType, sourceType),
+        eq(schema.generatedCode.sourceId, sourceId)
+      ))
       .orderBy(desc(schema.generatedCode.generatedAt));
+  }
+
+  async updateGeneratedCodeTxHash(id: string, txHash: string): Promise<void> {
+    await this.db
+      .update(schema.generatedCode)
+      .set({ txHash })
+      .where(eq(schema.generatedCode.id, id));
   }
 
   // ============================================================================
