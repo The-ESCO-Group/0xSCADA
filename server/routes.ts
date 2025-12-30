@@ -4,7 +4,19 @@ import { storage } from "./storage";
 import { blockchainService } from "./blockchain";
 import { insertSiteSchema, insertAssetSchema, insertEventAnchorSchema, insertMaintenanceRecordSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
-import { importBlueprints, validateCMReferences, validateUnitReferences, validatePhaseReferences } from "./blueprints";
+import { 
+  importBlueprints, 
+  validateCMReferences, 
+  validateUnitReferences, 
+  validatePhaseReferences,
+  codeGenerator,
+  seedDatabase,
+  isDatabaseSeeded,
+  cmTypeToFB,
+  generateSCLSource,
+  cmTypeToAOI,
+  generateL5X,
+} from "./blueprints";
 import type { BlueprintFiles } from "./blueprints";
 
 export async function registerRoutes(
@@ -603,6 +615,253 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating generated code:", error);
       res.status(500).json({ error: "Failed to create generated code" });
+    }
+  });
+
+  // ============================================================================
+  // CODE GENERATION API ENDPOINTS
+  // ============================================================================
+
+  // Seed database with default vendors
+  app.post("/api/blueprints/seed", async (req, res) => {
+    try {
+      const alreadySeeded = await isDatabaseSeeded();
+      if (alreadySeeded && !req.query.force) {
+        return res.json({ 
+          success: true, 
+          message: "Database already seeded. Use ?force=true to re-seed.",
+          skipped: true 
+        });
+      }
+
+      const result = await seedDatabase();
+      res.json(result);
+    } catch (error) {
+      console.error("Error seeding database:", error);
+      res.status(500).json({ error: "Failed to seed database" });
+    }
+  });
+
+  // Generate code for a Control Module
+  app.post("/api/generate/control-module/:cmTypeId", async (req, res) => {
+    try {
+      const { cmTypeId } = req.params;
+      const { vendorId, format, instanceName } = req.body;
+
+      // Get CM Type
+      const cmTypes = await storage.getControlModuleTypes();
+      const cmType = cmTypes.find(t => t.id === cmTypeId);
+      if (!cmType) {
+        return res.status(404).json({ error: "Control Module Type not found" });
+      }
+
+      // Get Vendor
+      const vendor = await storage.getVendorById(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+
+      // Load data type mappings
+      const mappings = await storage.getDataTypeMappingsByVendor(vendorId);
+      codeGenerator.loadDataTypeMappings(vendorId, mappings);
+
+      // Generate based on vendor
+      let code: string;
+      let language: string;
+
+      if (vendor.name === "siemens") {
+        const fb = cmTypeToFB({
+          name: cmType.name,
+          inputs: cmType.inputs as any[],
+          outputs: cmType.outputs as any[],
+          inOuts: cmType.inOuts as any[],
+        });
+        if (instanceName) fb.name = instanceName;
+        
+        if (format === "xml") {
+          // Generate TIA Portal XML
+          const { generateTIAXML } = await import("./blueprints/siemens-adapter");
+          code = generateTIAXML(fb);
+          language = "XML";
+        } else {
+          code = generateSCLSource(fb);
+          language = "SCL";
+        }
+      } else if (vendor.name === "rockwell") {
+        const aoi = cmTypeToAOI({
+          name: instanceName || cmType.name,
+          inputs: cmType.inputs as any[],
+          outputs: cmType.outputs as any[],
+          inOuts: cmType.inOuts as any[],
+        });
+        
+        if (format === "l5x") {
+          code = generateL5X(aoi);
+          language = "L5X";
+        } else {
+          // Return AOI structure as JSON
+          code = JSON.stringify(aoi, null, 2);
+          language = "JSON";
+        }
+      } else {
+        return res.status(400).json({ 
+          error: `Code generation not yet supported for vendor: ${vendor.name}` 
+        });
+      }
+
+      // Hash the code
+      const codeHash = codeGenerator.hashCode(code);
+
+      // Store the generated code
+      const stored = await storage.createGeneratedCode({
+        sourceType: "control_module",
+        sourceId: cmTypeId,
+        vendorId,
+        language,
+        code,
+        codeHash,
+        metadata: {
+          instanceName,
+          format,
+          cmTypeName: cmType.name,
+        },
+        status: "draft",
+      });
+
+      res.json({
+        success: true,
+        id: stored.id,
+        code,
+        codeHash,
+        language,
+        vendor: vendor.displayName,
+      });
+    } catch (error) {
+      console.error("Error generating code:", error);
+      res.status(500).json({ error: "Failed to generate code" });
+    }
+  });
+
+  // Generate code for a Phase
+  app.post("/api/generate/phase/:phaseTypeId", async (req, res) => {
+    try {
+      const { phaseTypeId } = req.params;
+      const { vendorId, format, instanceName } = req.body;
+
+      // Get Phase Type
+      const phaseTypes = await storage.getPhaseTypes();
+      const phaseType = phaseTypes.find(t => t.id === phaseTypeId);
+      if (!phaseType) {
+        return res.status(404).json({ error: "Phase Type not found" });
+      }
+
+      // Get Vendor
+      const vendor = await storage.getVendorById(vendorId);
+      if (!vendor) {
+        return res.status(404).json({ error: "Vendor not found" });
+      }
+
+      // Load data type mappings
+      const mappings = await storage.getDataTypeMappingsByVendor(vendorId);
+      codeGenerator.loadDataTypeMappings(vendorId, mappings);
+
+      let code: string;
+      let language: string;
+
+      if (vendor.name === "siemens") {
+        const { phaseTypeToFB, generateSCLSource: genSCL } = await import("./blueprints/siemens-adapter");
+        const fb = phaseTypeToFB({
+          name: instanceName || phaseType.name,
+          inputs: phaseType.inputs as any[],
+          outputs: phaseType.outputs as any[],
+          inOuts: phaseType.inOuts as any[],
+          internalValues: phaseType.internalValues as any[],
+          linkedModules: phaseType.linkedModules as any[],
+          hmiParameters: phaseType.hmiParameters as any[] || [],
+          recipeParameters: phaseType.recipeParameters as any[] || [],
+          reportParameters: phaseType.reportParameters as any[] || [],
+          sequences: phaseType.sequences as Record<string, any>,
+        });
+        code = genSCL(fb);
+        language = "SCL";
+      } else {
+        return res.status(400).json({ 
+          error: `Phase code generation not yet supported for vendor: ${vendor.name}` 
+        });
+      }
+
+      const codeHash = codeGenerator.hashCode(code);
+
+      const stored = await storage.createGeneratedCode({
+        sourceType: "phase",
+        sourceId: phaseTypeId,
+        vendorId,
+        language,
+        code,
+        codeHash,
+        metadata: {
+          instanceName,
+          format,
+          phaseTypeName: phaseType.name,
+        },
+        status: "draft",
+      });
+
+      res.json({
+        success: true,
+        id: stored.id,
+        code,
+        codeHash,
+        language,
+        vendor: vendor.displayName,
+      });
+    } catch (error) {
+      console.error("Error generating phase code:", error);
+      res.status(500).json({ error: "Failed to generate phase code" });
+    }
+  });
+
+  // Anchor generated code to blockchain
+  app.post("/api/generated-code/:id/anchor", async (req, res) => {
+    try {
+      const codeRecords = await storage.getGeneratedCode();
+      const record = codeRecords.find(r => r.id === req.params.id);
+      
+      if (!record) {
+        return res.status(404).json({ error: "Generated code not found" });
+      }
+
+      if (record.txHash) {
+        return res.json({ 
+          success: true, 
+          message: "Already anchored",
+          txHash: record.txHash 
+        });
+      }
+
+      // Anchor to blockchain
+      const txHash = await blockchainService.anchorEvent(
+        record.sourceId,
+        `CODE_GENERATED_${record.sourceType.toUpperCase()}`,
+        record.codeHash
+      );
+
+      if (txHash) {
+        // Update record with txHash (would need to add update method)
+        res.json({
+          success: true,
+          txHash,
+          codeHash: record.codeHash,
+        });
+      } else {
+        res.json({
+          success: false,
+          message: "Blockchain not enabled or anchoring failed",
+        });
+      }
+    } catch (error) {
+      console.error("Error anchoring code:", error);
+      res.status(500).json({ error: "Failed to anchor code" });
     }
   });
 
