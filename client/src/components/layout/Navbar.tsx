@@ -21,6 +21,8 @@ export function Navbar() {
           <Factory className="w-3 h-3" />
           [Blueprints]
         </Link>
+        <Link href="/vendors" className="hover:text-primary transition-colors uppercase">[Vendors]</Link>
+        <Link href="/codegen" className="hover:text-primary transition-colors uppercase">[CodeGen]</Link>
       </div>
 
       <button className="bg-primary hover:bg-primary/80 text-black font-mono font-bold text-xs uppercase px-4 py-2 border border-primary transition-all hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[0px] active:translate-y-[0px] shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]" data-testid="button-connect-wallet">
